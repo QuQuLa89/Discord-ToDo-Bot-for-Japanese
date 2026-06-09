@@ -118,6 +118,8 @@ python -m unittest discover -s tests -v
 
 # 開発プロセス
 
+要件定義の原文は[こちら](https://app.notion.com/p/ToDo-bot-37a0b377c720814a89b6f6c22dcfc5e3?source=copy_link)
+
 ## NotionとChatGPT/Codexを使用した要件定義
 - フォーマットをCodexに整えさせ、作成されたNotionページに要件定義を手動入力
 - 要件定義内容をChatGPTに「要件定義として最適か」検討させる
