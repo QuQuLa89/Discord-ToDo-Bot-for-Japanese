@@ -1,0 +1,91 @@
+from __future__ import annotations
+
+from zoneinfo import ZoneInfo
+
+APP_NAME = "ToDoリストbot"
+JST = ZoneInfo("Asia/Tokyo")
+UTC = ZoneInfo("UTC")
+
+TASK_TYPE_PERSONAL = "personal"
+TASK_TYPE_SHARED = "shared"
+TASK_TYPE_LABELS = {
+    TASK_TYPE_PERSONAL: "個人",
+    TASK_TYPE_SHARED: "共有",
+}
+
+STATUS_TODO = "未着手"
+STATUS_IN_PROGRESS = "進行中"
+STATUS_ON_HOLD = "保留"
+STATUS_DONE = "完了"
+STATUS_CANCELED = "中止"
+STATUSES = [STATUS_TODO, STATUS_IN_PROGRESS, STATUS_ON_HOLD, STATUS_DONE, STATUS_CANCELED]
+ACTIVE_STATUSES = [STATUS_TODO, STATUS_IN_PROGRESS, STATUS_ON_HOLD]
+
+PRIORITY_HIGH = "高"
+PRIORITY_MEDIUM = "中"
+PRIORITY_LOW = "低"
+PRIORITIES = [PRIORITY_HIGH, PRIORITY_MEDIUM, PRIORITY_LOW]
+PRIORITY_SORT = {
+    PRIORITY_HIGH: 0,
+    PRIORITY_MEDIUM: 1,
+    PRIORITY_LOW: 2,
+}
+
+TAG_NONE_LABEL = "タグなし"
+TAG_ALL_LABEL = "すべて"
+TAGS = ["勉強", "仕事", "趣味"]
+
+COLORS = {
+    "デフォルト": 0x5865F2,
+    "赤": 0xED4245,
+    "青": 0x3498DB,
+    "黄": 0xF1C40F,
+    "緑": 0x57F287,
+    "紫": 0x9B59B6,
+    "オレンジ": 0xE67E22,
+    "ピンク": 0xFF73A6,
+    "グレー": 0x95A5A6,
+}
+
+REMINDER_NONE_LABEL = "通知なし"
+REMINDER_OFFSETS = {
+    REMINDER_NONE_LABEL: None,
+    "期限時刻": 0,
+    "10分前": 10,
+    "30分前": 30,
+    "1時間前": 60,
+    "1日前": 1440,
+}
+
+REPEAT_NONE_LABEL = "なし"
+REPEAT_DAILY = "daily"
+REPEAT_WEEKLY = "weekly"
+REPEAT_MONTHLY = "monthly"
+REPEAT_RULE_LABELS = {
+    None: REPEAT_NONE_LABEL,
+    REPEAT_DAILY: "毎日",
+    REPEAT_WEEKLY: "毎週",
+    REPEAT_MONTHLY: "毎月",
+}
+REPEAT_RULE_VALUES = {
+    REPEAT_NONE_LABEL: None,
+    "毎日": REPEAT_DAILY,
+    "毎週": REPEAT_WEEKLY,
+    "毎月": REPEAT_MONTHLY,
+}
+
+DELETE_SCOPE_OCCURRENCE = "this"
+DELETE_SCOPE_FUTURE = "future"
+DELETE_SCOPE_SERIES = "series"
+DELETE_SCOPE_LABELS = {
+    DELETE_SCOPE_OCCURRENCE: "この回だけ",
+    DELETE_SCOPE_FUTURE: "この回以降",
+    DELETE_SCOPE_SERIES: "系列全体",
+}
+
+MAX_TITLE_LENGTH = 100
+MAX_DESCRIPTION_LENGTH = 1000
+MAX_ASSIGNEES = 5
+MAX_REMINDERS = 3
+RESTORE_DAYS = 30
+PAGE_SIZE = 5
