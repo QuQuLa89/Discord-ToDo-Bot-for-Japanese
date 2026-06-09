@@ -1,8 +1,6 @@
 .env
 *.db
-*.sqlite3
-*.sqlite3-wal
-*.sqlite3-shm
+data/
 backups/
 logs/
 dist/
