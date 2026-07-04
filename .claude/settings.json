@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(pytest:*)",
+      "Bash(pytest:*)",
+      "PowerShell(pip install -r requirements.txt:*)"
+    ]
+  }
+}
