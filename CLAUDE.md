@@ -7,6 +7,7 @@
 - 起動: `python main.py`
 - テスト: `pytest tests/ -q`
 - 依存: `pip install -r requirements.txt`
+- Docker起動: `docker compose up -d --build`（`.env` が必要。データは `data/`・`logs/`・`backups/` にバインドマウント）
 
 ## 構成
 

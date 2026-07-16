@@ -49,6 +49,22 @@ TODO_BOT_LOG_PATH=logs/todo_bot.log
 poetry run python main.py
 ```
 
+## Dockerでの起動
+
+Poetryをローカルにインストールせず、Dockerだけで起動することもできます。Linux VPSやNASなどWindows以外の環境で常時稼働させたい場合に向いています。
+
+1. `.env.example` を参考に `.env` を作成します（上記と同じ）。
+2. イメージをビルドして起動します。
+
+```powershell
+docker compose up -d --build
+```
+
+- `data/`（SQLite DB）、`logs/`、`backups/` はホスト側にバインドマウントされるため、コンテナを再作成してもデータは保持されます。
+- ログ確認: `docker compose logs -f`
+- 停止: `docker compose down`
+- コード変更後の再ビルド: `docker compose up -d --build`
+
 ## Discord Developer Portalでの作成手順
 
 1. [Discord Developer Portal](https://discord.com/developers/applications) を開きます。

@@ -1,0 +1,14 @@
+services:
+  todo-bot:
+    build: .
+    container_name: discord-todo-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      TODO_BOT_DB_PATH: data/todo_bot.sqlite3
+      TODO_BOT_LOG_PATH: logs/todo_bot.log
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./backups:/app/backups
