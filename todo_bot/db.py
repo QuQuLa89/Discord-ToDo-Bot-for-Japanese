@@ -123,7 +123,9 @@ class Database:
         destination_dir = Path(backup_dir)
         destination_dir.mkdir(parents=True, exist_ok=True)
         timestamp = now_utc().strftime("%Y%m%d_%H%M%S")
-        destination = destination_dir / f"{self.path.stem}_{timestamp}{self.path.suffix}"
+        destination = (
+            destination_dir / f"{self.path.stem}_{timestamp}{self.path.suffix}"
+        )
         try:
             self.connection.commit()
             shutil.copy2(self.path, destination)

@@ -11,7 +11,6 @@ from discord.ext import tasks
 from .config import load_settings, validate_token
 from .constants import (
     COLORS,
-    DELETE_SCOPE_FUTURE,
     DELETE_SCOPE_LABELS,
     DELETE_SCOPE_OCCURRENCE,
     DELETE_SCOPE_SERIES,
@@ -21,11 +20,6 @@ from .constants import (
     REMINDER_OFFSETS,
     REPEAT_NONE_LABEL,
     REPEAT_RULE_LABELS,
-    STATUS_CANCELED,
-    STATUS_DONE,
-    STATUS_IN_PROGRESS,
-    STATUS_ON_HOLD,
-    STATUS_TODO,
     STATUSES,
     TAG_ALL_LABEL,
     TAG_NONE_LABEL,
@@ -72,7 +66,8 @@ STATUS_FILTER_CHOICES = choice_list(["未完了", "すべて", "削除済み"] +
 REMINDER_CHOICES = choice_list(list(REMINDER_OFFSETS.keys()))
 REPEAT_CHOICES = choice_list([REPEAT_NONE_LABEL, "毎日", "毎週", "毎月"])
 DELETE_SCOPE_CHOICES = [
-    app_commands.Choice(name=label, value=value) for value, label in DELETE_SCOPE_LABELS.items()
+    app_commands.Choice(name=label, value=value)
+    for value, label in DELETE_SCOPE_LABELS.items()
 ]
 RELATION_CHOICES = [
     app_commands.Choice(name="すべて", value="all"),
@@ -95,7 +90,9 @@ class TodoDiscordBot(discord.Client):
         self.database.init_schema()
         backup = self.database.backup()
         if backup is None:
-            logger.warning("バックアップは作成されませんでした。既存DBがないか、バックアップに失敗しています。")
+            logger.warning(
+                "バックアップは作成されませんでした。既存DBがないか、バックアップに失敗しています。"
+            )
         self.tree.add_command(task_group)
         await self.tree.sync()
         self.reminder_loop.start()
@@ -141,7 +138,9 @@ class TodoDiscordBot(discord.Client):
             if task.task_type == TASK_TYPE_PERSONAL:
                 failures = []
                 for user_id in recipient_ids:
-                    user = self.get_user(int(user_id)) or await self.fetch_user(int(user_id))
+                    user = self.get_user(int(user_id)) or await self.fetch_user(
+                        int(user_id)
+                    )
                     try:
                         await user.send(message, allowed_mentions=allowed)
                     except discord.DiscordException as exc:
@@ -155,7 +154,9 @@ class TodoDiscordBot(discord.Client):
                             created_at=sent_at,
                         )
                 if failures:
-                    self.service.repo.mark_reminder_failed(reminder.reminder_id, sent_at, "; ".join(failures))
+                    self.service.repo.mark_reminder_failed(
+                        reminder.reminder_id, sent_at, "; ".join(failures)
+                    )
                 self.service.repo.mark_reminder_sent(reminder.reminder_id, sent_at)
                 return
 
@@ -167,9 +168,13 @@ class TodoDiscordBot(discord.Client):
             await channel.send(message, allowed_mentions=allowed)
             self.service.repo.mark_reminder_sent(reminder.reminder_id, sent_at)
         except Exception as exc:
-            logger.warning("共有タスク通知に失敗しました task_id=%s error=%s", task.task_id, exc)
+            logger.warning(
+                "共有タスク通知に失敗しました task_id=%s error=%s", task.task_id, exc
+            )
             try:
-                creator = self.get_user(int(task.creator_id)) or await self.fetch_user(int(task.creator_id))
+                creator = self.get_user(int(task.creator_id)) or await self.fetch_user(
+                    int(task.creator_id)
+                )
                 await creator.send(
                     f"共有タスク `{task.task_id}` のチャンネル通知に失敗しました。\n"
                     f"タスク名: {task.title}\n期限: {format_user_datetime(task.due_at)}",
@@ -190,7 +195,9 @@ class TodoDiscordBot(discord.Client):
 async def respond_error(interaction: discord.Interaction, message: str) -> None:
     content = f"処理できませんでした: {message}"
     if interaction.response.is_done():
-        await interaction.followup.send(content, ephemeral=True, allowed_mentions=discord.AllowedMentions.none())
+        await interaction.followup.send(
+            content, ephemeral=True, allowed_mentions=discord.AllowedMentions.none()
+        )
     else:
         await interaction.response.send_message(
             content,
@@ -199,18 +206,28 @@ async def respond_error(interaction: discord.Interaction, message: str) -> None:
         )
 
 
-async def warn_notification_failures(interaction: discord.Interaction, service: TaskService) -> None:
+async def warn_notification_failures(
+    interaction: discord.Interaction, service: TaskService
+) -> None:
     if not interaction.guild:
         return
-    failures = service.repo.unsurfaced_failures(str(interaction.user.id), str(interaction.guild.id))
+    failures = service.repo.unsurfaced_failures(
+        str(interaction.user.id), str(interaction.guild.id)
+    )
     if not failures:
         return
     lines = ["未通知または送信失敗したリマインドがあります。"]
     for item in failures:
         task_id = item.get("task_id") or "不明"
         lines.append(f"- `{task_id}`: {item['message']}")
-    service.repo.mark_failures_surfaced(str(interaction.user.id), str(interaction.guild.id), now_utc())
-    await interaction.followup.send("\n".join(lines), ephemeral=True, allowed_mentions=discord.AllowedMentions.none())
+    service.repo.mark_failures_surfaced(
+        str(interaction.user.id), str(interaction.guild.id), now_utc()
+    )
+    await interaction.followup.send(
+        "\n".join(lines),
+        ephemeral=True,
+        allowed_mentions=discord.AllowedMentions.none(),
+    )
 
 
 def build_task_embed(
@@ -227,7 +244,11 @@ def build_task_embed(
         color=COLORS.get(task.color, COLORS["デフォルト"]),
     )
     embed.add_field(name="状態", value=task.status, inline=True)
-    embed.add_field(name="種別", value=TASK_TYPE_LABELS.get(task.task_type, task.task_type), inline=True)
+    embed.add_field(
+        name="種別",
+        value=TASK_TYPE_LABELS.get(task.task_type, task.task_type),
+        inline=True,
+    )
     embed.add_field(name="優先度", value=task.priority, inline=True)
     embed.add_field(name="期限", value=format_user_datetime(task.due_at), inline=True)
     embed.add_field(name="タグ", value=task.tag or TAG_NONE_LABEL, inline=True)
@@ -235,18 +256,26 @@ def build_task_embed(
     embed.add_field(name="所有者", value=f"<@{task.owner_id}>", inline=True)
     embed.add_field(
         name="担当者",
-        value=", ".join(f"<@{user_id}>" for user_id in assignees) if assignees else "なし",
+        value=", ".join(f"<@{user_id}>" for user_id in assignees)
+        if assignees
+        else "なし",
         inline=False,
     )
     if include_description:
         embed.add_field(name="内容", value=task.description or "なし", inline=False)
     if reminders:
-        embed.add_field(name="リマインド", value=", ".join(_reminder_label(offset) for offset in reminders), inline=False)
+        embed.add_field(
+            name="リマインド",
+            value=", ".join(_reminder_label(offset) for offset in reminders),
+            inline=False,
+        )
     repeat_label = REPEAT_RULE_LABELS.get(task.repeat_rule, REPEAT_NONE_LABEL)
     if task.repeat_rule:
         repeat_label += f" / 終了日: {format_user_date(task.repeat_end_at)}"
     embed.add_field(name="繰り返し", value=repeat_label, inline=False)
-    embed.set_footer(text=f"作成: {format_user_datetime(task.created_at)} / 更新: {format_user_datetime(task.updated_at)}")
+    embed.set_footer(
+        text=f"作成: {format_user_datetime(task.created_at)} / 更新: {format_user_datetime(task.updated_at)}"
+    )
     return embed
 
 
@@ -263,7 +292,9 @@ def get_service(interaction: discord.Interaction) -> TaskService:
 
 def ensure_guild(interaction: discord.Interaction) -> tuple[int, int]:
     if interaction.guild is None or interaction.channel is None:
-        raise UserFacingError("このBotはDiscordサーバー内のチャンネルでのみ利用できます。DMでは利用できません。")
+        raise UserFacingError(
+            "このBotはDiscordサーバー内のチャンネルでのみ利用できます。DMでは利用できません。"
+        )
     return interaction.guild.id, interaction.channel.id
 
 
@@ -295,12 +326,16 @@ class ConfirmDeleteView(discord.ui.View):
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user.id != self.requester_id:
-            await interaction.response.send_message("この確認ボタンは実行者だけが使えます。", ephemeral=True)
+            await interaction.response.send_message(
+                "この確認ボタンは実行者だけが使えます。", ephemeral=True
+            )
             return False
         return True
 
     @discord.ui.button(label="削除する", style=discord.ButtonStyle.danger)
-    async def confirm(self, interaction: discord.Interaction, _: discord.ui.Button) -> None:
+    async def confirm(
+        self, interaction: discord.Interaction, _: discord.ui.Button
+    ) -> None:
         try:
             if self.emergency:
                 task = self.service.emergency_delete(
@@ -333,8 +368,12 @@ class ConfirmDeleteView(discord.ui.View):
             await respond_error(interaction, str(exc))
 
     @discord.ui.button(label="やめる", style=discord.ButtonStyle.secondary)
-    async def cancel(self, interaction: discord.Interaction, _: discord.ui.Button) -> None:
-        await interaction.response.edit_message(content="削除を取り消しました。", embed=None, view=None)
+    async def cancel(
+        self, interaction: discord.Interaction, _: discord.ui.Button
+    ) -> None:
+        await interaction.response.edit_message(
+            content="削除を取り消しました。", embed=None, view=None
+        )
 
 
 task_group = app_commands.Group(name="タスク", description="ToDoタスクを管理します")
@@ -396,7 +435,9 @@ async def add_task(
     try:
         guild_id, channel_id = ensure_guild(interaction)
         service = get_service(interaction)
-        assignees = [user.id for user in [assignee_1, assignee_2, assignee_3, assignee_4] if user]
+        assignees = [
+            user.id for user in [assignee_1, assignee_2, assignee_3, assignee_4] if user
+        ]
         task = service.create_task(
             guild_id=guild_id,
             channel_id=channel_id,
@@ -424,12 +465,21 @@ async def add_task(
         await respond_error(interaction, str(exc))
     except Exception:
         logger.exception("タスク追加中にエラーが発生しました")
-        await respond_error(interaction, "保存中に予期しないエラーが発生しました。ログを確認してください。")
+        await respond_error(
+            interaction,
+            "保存中に予期しないエラーが発生しました。ログを確認してください。",
+        )
 
 
 @task_group.command(name="一覧", description="タスク一覧を表示します")
-@app_commands.rename(status_filter="状態", tag_filter="タグ", relation="関係", page="ページ")
-@app_commands.choices(status_filter=STATUS_FILTER_CHOICES, tag_filter=TAG_FILTER_CHOICES, relation=RELATION_CHOICES)
+@app_commands.rename(
+    status_filter="状態", tag_filter="タグ", relation="関係", page="ページ"
+)
+@app_commands.choices(
+    status_filter=STATUS_FILTER_CHOICES,
+    tag_filter=TAG_FILTER_CHOICES,
+    relation=RELATION_CHOICES,
+)
 async def list_tasks(
     interaction: discord.Interaction,
     status_filter: str = "未完了",
@@ -456,7 +506,11 @@ async def list_tasks(
         embed = discord.Embed(title="タスク一覧", color=COLORS["デフォルト"])
         embed.description = (
             f"条件: 状態={status_filter} / タグ={tag_filter} / ページ={page}/{total_pages}\n"
-            + ("\n".join(task_line(task) for task in shown) if shown else "表示できるタスクはありません。")
+            + (
+                "\n".join(task_line(task) for task in shown)
+                if shown
+                else "表示できるタスクはありません。"
+            )
         )
         await interaction.response.send_message(
             embed=embed,
@@ -468,7 +522,10 @@ async def list_tasks(
         await respond_error(interaction, str(exc))
     except Exception:
         logger.exception("タスク一覧中にエラーが発生しました")
-        await respond_error(interaction, "一覧取得中に予期しないエラーが発生しました。ログを確認してください。")
+        await respond_error(
+            interaction,
+            "一覧取得中に予期しないエラーが発生しました。ログを確認してください。",
+        )
 
 
 @task_group.command(name="詳細", description="タスク詳細を表示します")
@@ -477,7 +534,9 @@ async def task_detail(interaction: discord.Interaction, task_id: str) -> None:
     try:
         guild_id, _ = ensure_guild(interaction)
         service = get_service(interaction)
-        task = service.get_visible_task(guild_id=guild_id, actor_id=interaction.user.id, task_id=task_id)
+        task = service.get_visible_task(
+            guild_id=guild_id, actor_id=interaction.user.id, task_id=task_id
+        )
         await interaction.response.send_message(
             embed=build_task_embed(task, service=service),
             ephemeral=task.task_type == TASK_TYPE_PERSONAL,
@@ -554,24 +613,37 @@ async def edit_task(
     try:
         guild_id, _ = ensure_guild(interaction)
         service = get_service(interaction)
-        assignees = [user.id for user in [assignee_1, assignee_2, assignee_3, assignee_4, assignee_5] if user]
+        assignees = [
+            user.id
+            for user in [assignee_1, assignee_2, assignee_3, assignee_4, assignee_5]
+            if user
+        ]
         task = service.edit_task(
             guild_id=guild_id,
             actor_id=interaction.user.id,
             task_id=task_id,
             title=title if title is not None else UNSET,
-            description=None if clear_description else (description if description is not None else UNSET),
-            due_at_text=None if clear_due else (due_at if due_at is not None else UNSET),
+            description=None
+            if clear_description
+            else (description if description is not None else UNSET),
+            due_at_text=None
+            if clear_due
+            else (due_at if due_at is not None else UNSET),
             priority=priority if priority is not None else UNSET,
             tag=tag if tag is not None else UNSET,
             color=color if color is not None else UNSET,
             status=status if status is not None else UNSET,
             reminder_labels=[reminder_1, reminder_2, reminder_3]
             if replace_reminders
-            or any(label != REMINDER_NONE_LABEL for label in [reminder_1, reminder_2, reminder_3])
+            or any(
+                label != REMINDER_NONE_LABEL
+                for label in [reminder_1, reminder_2, reminder_3]
+            )
             else UNSET,
             repeat_label=repeat if repeat is not None else UNSET,
-            repeat_end_date_text=None if clear_repeat_end else (repeat_end_date if repeat_end_date is not None else UNSET),
+            repeat_end_date_text=None
+            if clear_repeat_end
+            else (repeat_end_date if repeat_end_date is not None else UNSET),
             assignee_ids=assignees if replace_assignees else UNSET,
         )
         await interaction.response.send_message(
@@ -584,7 +656,10 @@ async def edit_task(
         await respond_error(interaction, str(exc))
     except Exception:
         logger.exception("タスク編集中にエラーが発生しました")
-        await respond_error(interaction, "編集中に予期しないエラーが発生しました。ログを確認してください。")
+        await respond_error(
+            interaction,
+            "編集中に予期しないエラーが発生しました。ログを確認してください。",
+        )
 
 
 @task_group.command(name="削除", description="タスクを削除します")
@@ -598,7 +673,9 @@ async def delete_task(
     try:
         guild_id, _ = ensure_guild(interaction)
         service = get_service(interaction)
-        task = service.get_visible_task(guild_id=guild_id, actor_id=interaction.user.id, task_id=task_id)
+        task = service.get_visible_task(
+            guild_id=guild_id, actor_id=interaction.user.id, task_id=task_id
+        )
         if task.owner_id != str(interaction.user.id):
             raise PermissionDenied("この操作はタスク所有者だけが実行できます。")
         view = ConfirmDeleteView(
@@ -625,7 +702,9 @@ async def restore_task(interaction: discord.Interaction, task_id: str) -> None:
     try:
         guild_id, _ = ensure_guild(interaction)
         service = get_service(interaction)
-        task = service.restore_task(guild_id=guild_id, actor_id=interaction.user.id, task_id=task_id)
+        task = service.restore_task(
+            guild_id=guild_id, actor_id=interaction.user.id, task_id=task_id
+        )
         await interaction.response.send_message(
             embed=build_task_embed(task, service=service, title="タスクを復元しました"),
             ephemeral=True,
@@ -641,7 +720,9 @@ async def complete_task(interaction: discord.Interaction, task_id: str) -> None:
     try:
         guild_id, _ = ensure_guild(interaction)
         service = get_service(interaction)
-        task = service.complete_task(guild_id=guild_id, actor_id=interaction.user.id, task_id=task_id)
+        task = service.complete_task(
+            guild_id=guild_id, actor_id=interaction.user.id, task_id=task_id
+        )
         await interaction.response.send_message(
             embed=build_task_embed(task, service=service, title="タスクを完了しました"),
             ephemeral=True,
@@ -657,7 +738,9 @@ async def uncomplete_task(interaction: discord.Interaction, task_id: str) -> Non
     try:
         guild_id, _ = ensure_guild(interaction)
         service = get_service(interaction)
-        task = service.uncomplete_task(guild_id=guild_id, actor_id=interaction.user.id, task_id=task_id)
+        task = service.uncomplete_task(
+            guild_id=guild_id, actor_id=interaction.user.id, task_id=task_id
+        )
         await interaction.response.send_message(
             embed=build_task_embed(task, service=service, title="完了を取り消しました"),
             ephemeral=True,
@@ -670,11 +753,18 @@ async def uncomplete_task(interaction: discord.Interaction, task_id: str) -> Non
 @task_group.command(name="状態変更", description="タスクの状態を変更します")
 @app_commands.rename(task_id="タスクid", status="状態")
 @app_commands.choices(status=STATUS_CHOICES)
-async def change_status(interaction: discord.Interaction, task_id: str, status: str) -> None:
+async def change_status(
+    interaction: discord.Interaction, task_id: str, status: str
+) -> None:
     try:
         guild_id, _ = ensure_guild(interaction)
         service = get_service(interaction)
-        task = service.change_status(guild_id=guild_id, actor_id=interaction.user.id, task_id=task_id, status=status)
+        task = service.change_status(
+            guild_id=guild_id,
+            actor_id=interaction.user.id,
+            task_id=task_id,
+            status=status,
+        )
         await interaction.response.send_message(
             embed=build_task_embed(task, service=service, title="状態を変更しました"),
             ephemeral=True,
@@ -727,13 +817,19 @@ async def transfer_owner(
         await respond_error(interaction, str(exc))
 
 
-@admin_group.command(name="緊急削除", description="管理者が理由付きでタスクを緊急削除します")
+@admin_group.command(
+    name="緊急削除", description="管理者が理由付きでタスクを緊急削除します"
+)
 @app_commands.rename(task_id="タスクid", reason="削除理由")
-async def emergency_delete(interaction: discord.Interaction, task_id: str, reason: str) -> None:
+async def emergency_delete(
+    interaction: discord.Interaction, task_id: str, reason: str
+) -> None:
     try:
         guild_id, _ = ensure_guild(interaction)
         service = get_service(interaction)
-        task = service.get_admin_task(guild_id=guild_id, task_id=task_id, is_admin=is_admin(interaction))
+        task = service.get_admin_task(
+            guild_id=guild_id, task_id=task_id, is_admin=is_admin(interaction)
+        )
         view = ConfirmDeleteView(
             service=service,
             requester_id=interaction.user.id,

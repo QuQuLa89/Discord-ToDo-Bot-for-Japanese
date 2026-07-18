@@ -5,7 +5,13 @@ import unittest
 from datetime import datetime
 from pathlib import Path
 
-from todo_bot.constants import STATUS_DONE, STATUS_TODO, TASK_TYPE_PERSONAL, TASK_TYPE_SHARED, UTC
+from todo_bot.constants import (
+    STATUS_DONE,
+    STATUS_TODO,
+    TASK_TYPE_PERSONAL,
+    TASK_TYPE_SHARED,
+    UTC,
+)
 from todo_bot.db import Database
 from todo_bot.repository import TaskRepository
 from todo_bot.services import PermissionDenied, TaskService, UserFacingError
@@ -41,7 +47,9 @@ class TaskServiceTest(unittest.TestCase):
         self.assertEqual(task.owner_id, "100")
         self.assertEqual(self.service.repo.get_assignees(task.task_id), ["100", "200"])
         self.assertEqual(self.service.repo.reminder_offsets(task.task_id), [0, 10])
-        self.assertIn("@\u200beveryone", self.service.repo.get_task(task.task_id).description)
+        self.assertIn(
+            "@\u200beveryone", self.service.repo.get_task(task.task_id).description
+        )
 
     def test_rejects_blank_title_and_too_many_assignees(self) -> None:
         with self.assertRaises(UserFacingError):
@@ -74,13 +82,19 @@ class TaskServiceTest(unittest.TestCase):
         )
 
         with self.assertRaises(PermissionDenied):
-            self.service.edit_task(guild_id=1, actor_id=200, task_id=task.task_id, title="変更")
+            self.service.edit_task(
+                guild_id=1, actor_id=200, task_id=task.task_id, title="変更"
+            )
 
-        completed = self.service.complete_task(guild_id=1, actor_id=200, task_id=task.task_id)
+        completed = self.service.complete_task(
+            guild_id=1, actor_id=200, task_id=task.task_id
+        )
         self.assertEqual(completed.status, STATUS_DONE)
         self.assertEqual(completed.completed_by, "200")
 
-        reopened = self.service.uncomplete_task(guild_id=1, actor_id=200, task_id=task.task_id)
+        reopened = self.service.uncomplete_task(
+            guild_id=1, actor_id=200, task_id=task.task_id
+        )
         self.assertEqual(reopened.status, STATUS_TODO)
         self.assertIsNone(reopened.completed_by)
 
@@ -93,11 +107,15 @@ class TaskServiceTest(unittest.TestCase):
             title="消す予定",
         )
 
-        deleted = self.service.delete_task(guild_id=1, actor_id=100, task_id=task.task_id)
+        deleted = self.service.delete_task(
+            guild_id=1, actor_id=100, task_id=task.task_id
+        )
         self.assertEqual(len(deleted), 1)
         self.assertIsNotNone(self.service.repo.get_task(task.task_id).deleted_at)
 
-        restored = self.service.restore_task(guild_id=1, actor_id=100, task_id=task.task_id)
+        restored = self.service.restore_task(
+            guild_id=1, actor_id=100, task_id=task.task_id
+        )
         self.assertIsNone(restored.deleted_at)
         self.assertIsNone(restored.restore_until)
 
@@ -127,10 +145,18 @@ class TaskServiceTest(unittest.TestCase):
             task_type=TASK_TYPE_PERSONAL,
             title="完了済み",
         )
-        self.service.change_status(guild_id=1, actor_id=100, task_id=done.task_id, status=STATUS_DONE, current_time=current)
+        self.service.change_status(
+            guild_id=1,
+            actor_id=100,
+            task_id=done.task_id,
+            status=STATUS_DONE,
+            current_time=current,
+        )
 
         tasks = self.service.list_tasks(guild_id=1, user_id=100)
-        self.assertEqual([task.task_id for task in tasks], [overdue.task_id, later.task_id])
+        self.assertEqual(
+            [task.task_id for task in tasks], [overdue.task_id, later.task_id]
+        )
 
     def test_monthly_repeat_generates_latest_only_after_long_stop(self) -> None:
         self.service.create_task(
@@ -144,7 +170,9 @@ class TaskServiceTest(unittest.TestCase):
             current_time=datetime(2026, 1, 1, 0, 0, tzinfo=UTC),
         )
 
-        generated = self.service.generate_repeats(datetime(2026, 4, 2, 0, 0, tzinfo=UTC))
+        generated = self.service.generate_repeats(
+            datetime(2026, 4, 2, 0, 0, tzinfo=UTC)
+        )
 
         self.assertEqual(len(generated), 1)
         self.assertEqual(generated[0].task_id, "T-000002")
@@ -159,7 +187,9 @@ class TaskServiceTest(unittest.TestCase):
             task_type=TASK_TYPE_SHARED,
             title="担当解除",
         )
-        self.service.edit_task(guild_id=1, actor_id=100, task_id=task.task_id, assignee_ids=[])
+        self.service.edit_task(
+            guild_id=1, actor_id=100, task_id=task.task_id, assignee_ids=[]
+        )
         self.assertEqual(self.service.repo.get_assignees(task.task_id), [])
 
 

@@ -67,9 +67,13 @@ def normalize_task_id(task_id: str) -> str:
 def normalize_title(title: str) -> str:
     text = sanitize_mentions(title.strip())
     if not text:
-        raise UserFacingError("タスク名を入力してください。空白だけの名前は使えません。")
+        raise UserFacingError(
+            "タスク名を入力してください。空白だけの名前は使えません。"
+        )
     if len(text) > MAX_TITLE_LENGTH:
-        raise UserFacingError(f"タスク名は{MAX_TITLE_LENGTH}文字以内で入力してください。")
+        raise UserFacingError(
+            f"タスク名は{MAX_TITLE_LENGTH}文字以内で入力してください。"
+        )
     return text
 
 
@@ -80,7 +84,9 @@ def normalize_description(description: str | None) -> str | None:
     if not text:
         return None
     if len(text) > MAX_DESCRIPTION_LENGTH:
-        raise UserFacingError(f"タスク内容は{MAX_DESCRIPTION_LENGTH}文字以内で入力してください。")
+        raise UserFacingError(
+            f"タスク内容は{MAX_DESCRIPTION_LENGTH}文字以内で入力してください。"
+        )
     return text
 
 
@@ -88,7 +94,9 @@ def normalize_tag(label: str | None) -> str | None:
     if label in (None, "", TAG_NONE_LABEL, TAG_ALL_LABEL):
         return None
     if label not in TAGS:
-        raise UserFacingError("タグは「勉強」「仕事」「趣味」「タグなし」から選んでください。")
+        raise UserFacingError(
+            "タグは「勉強」「仕事」「趣味」「タグなし」から選んでください。"
+        )
     return label
 
 
@@ -114,7 +122,9 @@ def normalize_repeat(label: str | None, due_at: datetime | None) -> str | None:
     if label in (None, "", REPEAT_NONE_LABEL):
         return None
     if label not in REPEAT_RULE_VALUES:
-        raise UserFacingError("繰り返しは「なし」「毎日」「毎週」「毎月」から選んでください。")
+        raise UserFacingError(
+            "繰り返しは「なし」「毎日」「毎週」「毎月」から選んでください。"
+        )
     rule = REPEAT_RULE_VALUES[label]
     if rule and due_at is None:
         raise UserFacingError("繰り返しタスクには期限が必要です。")
@@ -122,7 +132,9 @@ def normalize_repeat(label: str | None, due_at: datetime | None) -> str | None:
 
 
 def normalize_assignees(user_ids: list[str]) -> list[str]:
-    normalized = list(dict.fromkeys(str(user_id) for user_id in user_ids if str(user_id).strip()))
+    normalized = list(
+        dict.fromkeys(str(user_id) for user_id in user_ids if str(user_id).strip())
+    )
     if len(normalized) > MAX_ASSIGNEES:
         raise UserFacingError(f"担当者は最大{MAX_ASSIGNEES}人までです。")
     return normalized
@@ -153,21 +165,31 @@ class TaskService:
     ) -> Task:
         now = current_time or now_utc()
         if task_type not in (TASK_TYPE_PERSONAL, TASK_TYPE_SHARED):
-            raise UserFacingError("タスク種別は「個人」または「共有」から選んでください。")
+            raise UserFacingError(
+                "タスク種別は「個人」または「共有」から選んでください。"
+            )
         if priority not in PRIORITIES:
             raise UserFacingError("優先度は「高」「中」「低」から選んでください。")
         if color not in COLORS:
             raise UserFacingError("不明な色です。")
 
-        due_at = parse_user_datetime(due_at_text, allow_past=False, now=now) if due_at_text else None
-        repeat_end_at = parse_user_date_end(repeat_end_date_text) if repeat_end_date_text else None
+        due_at = (
+            parse_user_datetime(due_at_text, allow_past=False, now=now)
+            if due_at_text
+            else None
+        )
+        repeat_end_at = (
+            parse_user_date_end(repeat_end_date_text) if repeat_end_date_text else None
+        )
         repeat_rule = normalize_repeat(repeat_label, due_at)
         if repeat_rule and repeat_end_at and due_at and repeat_end_at < due_at:
             raise UserFacingError("繰り返し終了日は期限日以降にしてください。")
 
         task_id = self.repo.next_task_id()
         creator = str(creator_id)
-        assignees = normalize_assignees([creator] + [str(item) for item in (assignee_ids or [])])
+        assignees = normalize_assignees(
+            [creator] + [str(item) for item in (assignee_ids or [])]
+        )
         reminder_offsets = normalize_reminders(reminder_labels or [], due_at)
         anchor_day = to_jst(due_at).day if due_at and repeat_rule == "monthly" else None
         task = Task(
@@ -224,7 +246,9 @@ class TaskService:
         task = self._require_task(task_id, guild_id)
         self._require_owner(task, actor_id)
         if task.is_deleted:
-            raise UserFacingError("削除済みタスクは編集できません。先に復元してください。")
+            raise UserFacingError(
+                "削除済みタスクは編集できません。先に復元してください。"
+            )
 
         fields: dict[str, Any] = {"updated_at": now}
         new_due_at = task.due_at
@@ -235,7 +259,11 @@ class TaskService:
         if description is not UNSET:
             fields["description"] = normalize_description(description)
         if due_at_text is not UNSET:
-            new_due_at = parse_user_datetime(due_at_text, allow_past=False, now=now) if due_at_text else None
+            new_due_at = (
+                parse_user_datetime(due_at_text, allow_past=False, now=now)
+                if due_at_text
+                else None
+            )
             fields["due_at"] = new_due_at
             if new_due_at is None:
                 new_repeat_rule = None
@@ -260,10 +288,18 @@ class TaskService:
             new_repeat_rule = normalize_repeat(repeat_label, new_due_at)
             fields["repeat_rule"] = new_repeat_rule
             fields["parent_series_id"] = task.series_id if new_repeat_rule else None
-            fields["repeat_anchor_day"] = to_jst(new_due_at).day if new_due_at and new_repeat_rule == "monthly" else None
+            fields["repeat_anchor_day"] = (
+                to_jst(new_due_at).day
+                if new_due_at and new_repeat_rule == "monthly"
+                else None
+            )
             fields["repeat_generated_at"] = None
         if repeat_end_date_text is not UNSET:
-            repeat_end_at = parse_user_date_end(repeat_end_date_text) if repeat_end_date_text else None
+            repeat_end_at = (
+                parse_user_date_end(repeat_end_date_text)
+                if repeat_end_date_text
+                else None
+            )
             if repeat_end_at and new_due_at and repeat_end_at < new_due_at:
                 raise UserFacingError("繰り返し終了日は期限日以降にしてください。")
             fields["repeat_end_at"] = repeat_end_at
@@ -273,10 +309,14 @@ class TaskService:
 
         self.repo.update_task(task.task_id, fields)
         if assignee_ids is not UNSET:
-            self.repo.replace_assignees(task.task_id, normalize_assignees([str(item) for item in assignee_ids]))
+            self.repo.replace_assignees(
+                task.task_id, normalize_assignees([str(item) for item in assignee_ids])
+            )
         if reminder_labels is not UNSET or due_at_text is not UNSET:
             if reminder_labels is UNSET:
-                reminder_offsets = self.repo.reminder_offsets(task.task_id) if new_due_at else []
+                reminder_offsets = (
+                    self.repo.reminder_offsets(task.task_id) if new_due_at else []
+                )
             else:
                 reminder_offsets = normalize_reminders(reminder_labels, new_due_at)
             self.repo.replace_reminders(task.task_id, new_due_at, reminder_offsets)
@@ -295,15 +335,23 @@ class TaskService:
         self._require_owner_or_assignee(task, actor_id)
         if status not in STATUSES:
             raise UserFacingError("不明な状態です。")
-        fields = self._status_fields(task, status, str(actor_id), current_time or now_utc())
+        fields = self._status_fields(
+            task, status, str(actor_id), current_time or now_utc()
+        )
         fields["updated_at"] = current_time or now_utc()
         self.repo.update_task(task.task_id, fields)
         return self.repo.get_task(task.task_id)
 
-    def complete_task(self, *, guild_id: int | str, actor_id: int | str, task_id: str) -> Task:
-        return self.change_status(guild_id=guild_id, actor_id=actor_id, task_id=task_id, status=STATUS_DONE)
+    def complete_task(
+        self, *, guild_id: int | str, actor_id: int | str, task_id: str
+    ) -> Task:
+        return self.change_status(
+            guild_id=guild_id, actor_id=actor_id, task_id=task_id, status=STATUS_DONE
+        )
 
-    def uncomplete_task(self, *, guild_id: int | str, actor_id: int | str, task_id: str) -> Task:
+    def uncomplete_task(
+        self, *, guild_id: int | str, actor_id: int | str, task_id: str
+    ) -> Task:
         task = self._require_task(task_id, guild_id)
         self._require_owner_or_assignee(task, actor_id)
         if task.status != STATUS_DONE:
@@ -391,7 +439,9 @@ class TaskService:
             raise PermissionDenied("この操作にはDiscordの管理者権限が必要です。")
         task = self._require_task(task_id, guild_id, include_deleted=True)
         now = now_utc()
-        self.repo.update_task(task.task_id, {"owner_id": str(new_owner_id), "updated_at": now})
+        self.repo.update_task(
+            task.task_id, {"owner_id": str(new_owner_id), "updated_at": now}
+        )
         self.repo.add_audit_log(
             action="transfer_owner",
             actor_id=str(actor_id),
@@ -451,7 +501,11 @@ class TaskService:
             tag_value = "__NONE__"
         elif tag_filter and tag_filter != TAG_ALL_LABEL:
             tag_value = normalize_tag(tag_filter)
-        effective_status = None if status_filter in (None, "未完了", "すべて", "削除済み") else status_filter
+        effective_status = (
+            None
+            if status_filter in (None, "未完了", "すべて", "削除済み")
+            else status_filter
+        )
         tasks = self.repo.list_user_tasks(
             guild_id=str(guild_id),
             user_id=str(user_id),
@@ -464,12 +518,16 @@ class TaskService:
             tasks = [task for task in tasks if task.status in ACTIVE_STATUSES]
         return sorted(tasks, key=lambda task: self._sort_key(task))
 
-    def get_visible_task(self, *, guild_id: int | str, actor_id: int | str, task_id: str) -> Task:
+    def get_visible_task(
+        self, *, guild_id: int | str, actor_id: int | str, task_id: str
+    ) -> Task:
         task = self._require_task(task_id, guild_id, include_deleted=True)
         self._require_view(task, actor_id)
         return task
 
-    def get_admin_task(self, *, guild_id: int | str, task_id: str, is_admin: bool) -> Task:
+    def get_admin_task(
+        self, *, guild_id: int | str, task_id: str, is_admin: bool
+    ) -> Task:
         if not is_admin:
             raise PermissionDenied("この操作にはDiscordの管理者権限が必要です。")
         return self._require_task(task_id, guild_id, include_deleted=True)
@@ -493,7 +551,9 @@ class TaskService:
             assignees = self.repo.get_assignees(task.task_id)
             reminder_offsets = self.repo.reminder_offsets(task.task_id)
             self.repo.create_task(new_task, assignees, reminder_offsets)
-            self.repo.update_task(task.task_id, {"repeat_generated_at": now, "updated_at": now})
+            self.repo.update_task(
+                task.task_id, {"repeat_generated_at": now, "updated_at": now}
+            )
             if skipped_count:
                 self.repo.add_repeat_skip(
                     task.series_id,
@@ -506,12 +566,16 @@ class TaskService:
     def cleanup_expired_deleted(self, current_time: datetime | None = None) -> int:
         return self.repo.purge_expired_deleted(current_time or now_utc())
 
-    def _require_task(self, task_id: str, guild_id: int | str, *, include_deleted: bool = False) -> Task:
+    def _require_task(
+        self, task_id: str, guild_id: int | str, *, include_deleted: bool = False
+    ) -> Task:
         task = self.repo.get_task(normalize_task_id(task_id))
         if task is None or task.guild_id != str(guild_id):
             raise UserFacingError("指定されたタスクIDが見つかりません。")
         if task.is_deleted and not include_deleted:
-            raise UserFacingError("指定されたタスクは削除済みです。復元してから操作してください。")
+            raise UserFacingError(
+                "指定されたタスクは削除済みです。復元してから操作してください。"
+            )
         return task
 
     def _require_view(self, task: Task, actor_id: int | str) -> None:
@@ -534,11 +598,15 @@ class TaskService:
             return
         raise PermissionDenied("この操作を実行する権限がありません。")
 
-    def _status_fields(self, task: Task, status: str, actor_id: str, now: datetime) -> dict[str, Any]:
+    def _status_fields(
+        self, task: Task, status: str, actor_id: str, now: datetime
+    ) -> dict[str, Any]:
         if status == STATUS_DONE:
             return {
                 "status": STATUS_DONE,
-                "previous_status": task.status if task.status != STATUS_DONE else task.previous_status,
+                "previous_status": task.status
+                if task.status != STATUS_DONE
+                else task.previous_status,
                 "completed_at": now,
                 "completed_by": actor_id,
             }
@@ -551,28 +619,47 @@ class TaskService:
 
     def _delete_targets(self, task: Task, scope: str) -> list[Task]:
         if scope == DELETE_SCOPE_SERIES:
-            return [item for item in self.repo.list_series_tasks(task.series_id) if not item.is_deleted]
+            return [
+                item
+                for item in self.repo.list_series_tasks(task.series_id)
+                if not item.is_deleted
+            ]
         if scope == DELETE_SCOPE_FUTURE:
             series = self.repo.list_series_tasks(task.series_id)
             return [
                 item
                 for item in series
-                if not item.is_deleted and (item.due_at is None or task.due_at is None or item.due_at >= task.due_at)
+                if not item.is_deleted
+                and (
+                    item.due_at is None
+                    or task.due_at is None
+                    or item.due_at >= task.due_at
+                )
             ]
         return [task]
 
     def _create_next_repeat_now(self, task: Task, now: datetime) -> Task | None:
         if not task.repeat_rule or not task.due_at:
             return None
-        next_due = add_repeat_period(task.due_at, task.repeat_rule, task.repeat_anchor_day)
+        next_due = add_repeat_period(
+            task.due_at, task.repeat_rule, task.repeat_anchor_day
+        )
         if task.repeat_end_at and next_due > task.repeat_end_at:
             return None
         new_task = self._copy_for_repeat(task, next_due, now)
-        self.repo.create_task(new_task, self.repo.get_assignees(task.task_id), self.repo.reminder_offsets(task.task_id))
-        self.repo.update_task(task.task_id, {"repeat_generated_at": now, "updated_at": now})
+        self.repo.create_task(
+            new_task,
+            self.repo.get_assignees(task.task_id),
+            self.repo.reminder_offsets(task.task_id),
+        )
+        self.repo.update_task(
+            task.task_id, {"repeat_generated_at": now, "updated_at": now}
+        )
         return new_task
 
-    def _copy_for_repeat(self, task: Task, due_at: datetime, created_at: datetime) -> Task:
+    def _copy_for_repeat(
+        self, task: Task, due_at: datetime, created_at: datetime
+    ) -> Task:
         return replace(
             task,
             task_id=self.repo.next_task_id(),
@@ -598,7 +685,12 @@ class TaskService:
         else:
             overdue_group = 2
         due = task.due_at or datetime.max.replace(tzinfo=now.tzinfo)
-        return (overdue_group, due, PRIORITY_SORT.get(task.priority, 9), task.created_at)
+        return (
+            overdue_group,
+            due,
+            PRIORITY_SORT.get(task.priority, 9),
+            task.created_at,
+        )
 
 
 def task_line(task: Task) -> str:

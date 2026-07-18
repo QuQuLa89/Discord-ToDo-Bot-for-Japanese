@@ -27,12 +27,16 @@ def to_jst(value: datetime | None) -> datetime | None:
     return value.astimezone(JST)
 
 
-def parse_user_datetime(value: str, *, allow_past: bool, now: datetime | None = None) -> datetime:
+def parse_user_datetime(
+    value: str, *, allow_past: bool, now: datetime | None = None
+) -> datetime:
     text = value.strip()
     try:
         local = datetime.strptime(text, USER_DATETIME_FORMAT).replace(tzinfo=JST)
     except ValueError as exc:
-        raise ValueError("日時は `YYYY-MM-DD HH:MM` の形式で入力してください。例: `2026-06-10 21:00`") from exc
+        raise ValueError(
+            "日時は `YYYY-MM-DD HH:MM` の形式で入力してください。例: `2026-06-10 21:00`"
+        ) from exc
 
     parsed = local.astimezone(UTC)
     current = now or now_utc()
@@ -46,7 +50,9 @@ def parse_user_date_end(value: str) -> datetime:
     try:
         parsed_date = datetime.strptime(text, USER_DATE_FORMAT).date()
     except ValueError as exc:
-        raise ValueError("終了日は `YYYY-MM-DD` の形式で入力してください。例: `2026-06-30`") from exc
+        raise ValueError(
+            "終了日は `YYYY-MM-DD` の形式で入力してください。例: `2026-06-30`"
+        ) from exc
     local_end = datetime.combine(parsed_date, time(23, 59, 59), tzinfo=JST)
     return local_end.astimezone(UTC)
 
@@ -63,7 +69,9 @@ def format_user_date(value: datetime | None) -> str:
     return to_jst(value).strftime(USER_DATE_FORMAT)
 
 
-def add_repeat_period(value: datetime, rule: str, anchor_day: int | None = None) -> datetime:
+def add_repeat_period(
+    value: datetime, rule: str, anchor_day: int | None = None
+) -> datetime:
     local = value.astimezone(JST)
     if rule == REPEAT_DAILY:
         return (local + timedelta(days=1)).astimezone(UTC)

@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Any
 
-from .constants import ACTIVE_STATUSES, STATUS_CANCELED, STATUS_DONE
+from .constants import STATUS_CANCELED, STATUS_DONE
 from .db import Database
 from .models import Reminder, Task
 from .time_utils import now_utc
@@ -24,7 +24,9 @@ class TaskRepository:
     def next_task_id(self) -> str:
         connection = self.db.connection
         connection.execute("BEGIN IMMEDIATE")
-        row = connection.execute("SELECT value FROM meta WHERE key = 'last_task_number'").fetchone()
+        row = connection.execute(
+            "SELECT value FROM meta WHERE key = 'last_task_number'"
+        ).fetchone()
         number = int(row["value"]) + 1 if row else 1
         connection.execute(
             "INSERT INTO meta(key, value) VALUES('last_task_number', ?) "
@@ -34,7 +36,9 @@ class TaskRepository:
         connection.commit()
         return f"T-{number:06d}"
 
-    def create_task(self, task: Task, assignee_ids: list[str], reminder_offsets: list[int]) -> None:
+    def create_task(
+        self, task: Task, assignee_ids: list[str], reminder_offsets: list[int]
+    ) -> None:
         self.db.connection.execute(
             """
             INSERT INTO tasks (
@@ -54,23 +58,35 @@ class TaskRepository:
             self._task_to_params(task),
         )
         self._replace_assignees_without_commit(task.task_id, assignee_ids)
-        self._replace_reminders_without_commit(task.task_id, task.due_at, reminder_offsets)
+        self._replace_reminders_without_commit(
+            task.task_id, task.due_at, reminder_offsets
+        )
         self.db.connection.commit()
 
     def get_task(self, task_id: str) -> Task | None:
-        row = self.db.query_one("SELECT * FROM tasks WHERE task_id = ?", (task_id.upper(),))
+        row = self.db.query_one(
+            "SELECT * FROM tasks WHERE task_id = ?", (task_id.upper(),)
+        )
         return self._row_to_task(row) if row else None
 
     def get_assignees(self, task_id: str) -> list[str]:
-        rows = self.db.query_all("SELECT user_id FROM assignees WHERE task_id = ? ORDER BY user_id", (task_id,))
+        rows = self.db.query_all(
+            "SELECT user_id FROM assignees WHERE task_id = ? ORDER BY user_id",
+            (task_id,),
+        )
         return [row["user_id"] for row in rows]
 
     def get_reminders(self, task_id: str) -> list[Reminder]:
-        rows = self.db.query_all("SELECT * FROM reminders WHERE task_id = ? ORDER BY remind_at", (task_id,))
+        rows = self.db.query_all(
+            "SELECT * FROM reminders WHERE task_id = ? ORDER BY remind_at", (task_id,)
+        )
         return [self._row_to_reminder(row) for row in rows]
 
     def reminder_offsets(self, task_id: str) -> list[int]:
-        rows = self.db.query_all("SELECT offset_minutes FROM reminders WHERE task_id = ? ORDER BY offset_minutes", (task_id,))
+        rows = self.db.query_all(
+            "SELECT offset_minutes FROM reminders WHERE task_id = ? ORDER BY offset_minutes",
+            (task_id,),
+        )
         return [int(row["offset_minutes"]) for row in rows]
 
     def update_task(self, task_id: str, fields: dict[str, Any]) -> None:
@@ -82,13 +98,17 @@ class TaskRepository:
         }
         assignments = ", ".join(f"{key} = :{key}" for key in serialized)
         serialized["task_id"] = task_id
-        self.db.execute(f"UPDATE tasks SET {assignments} WHERE task_id = :task_id", serialized)
+        self.db.execute(
+            f"UPDATE tasks SET {assignments} WHERE task_id = :task_id", serialized
+        )
 
     def replace_assignees(self, task_id: str, assignee_ids: list[str]) -> None:
         self._replace_assignees_without_commit(task_id, assignee_ids)
         self.db.connection.commit()
 
-    def replace_reminders(self, task_id: str, due_at: datetime | None, reminder_offsets: list[int]) -> None:
+    def replace_reminders(
+        self, task_id: str, due_at: datetime | None, reminder_offsets: list[int]
+    ) -> None:
         self._replace_reminders_without_commit(task_id, due_at, reminder_offsets)
         self.db.connection.commit()
 
@@ -112,7 +132,7 @@ class TaskRepository:
             relation_sql = "EXISTS (SELECT 1 FROM assignees a WHERE a.task_id = t.task_id AND a.user_id = ?)"
             params = [guild_id, user_id]
 
-        conditions = [f"t.guild_id = ?", f"({relation_sql})"]
+        conditions = ["t.guild_id = ?", f"({relation_sql})"]
         if include_deleted:
             conditions.append("t.deleted_at IS NOT NULL")
         else:
@@ -163,7 +183,9 @@ class TaskRepository:
             (_serialize_datetime(sent_at), reminder_id),
         )
 
-    def mark_reminder_failed(self, reminder_id: int, failed_at: datetime, reason: str) -> None:
+    def mark_reminder_failed(
+        self, reminder_id: int, failed_at: datetime, reason: str
+    ) -> None:
         self.db.execute(
             "UPDATE reminders SET failed_at = ?, failure_reason = ? WHERE id = ?",
             (_serialize_datetime(failed_at), reason[:500], reminder_id),
@@ -184,10 +206,19 @@ class TaskRepository:
             INSERT INTO notification_failures(user_id, task_id, guild_id, failure_type, message, created_at)
             VALUES (?, ?, ?, ?, ?, ?)
             """,
-            (user_id, task_id, guild_id, failure_type, message[:500], _serialize_datetime(created_at)),
+            (
+                user_id,
+                task_id,
+                guild_id,
+                failure_type,
+                message[:500],
+                _serialize_datetime(created_at),
+            ),
         )
 
-    def unsurfaced_failures(self, user_id: str, guild_id: str | None) -> list[dict[str, str]]:
+    def unsurfaced_failures(
+        self, user_id: str, guild_id: str | None
+    ) -> list[dict[str, str]]:
         rows = self.db.query_all(
             """
             SELECT * FROM notification_failures
@@ -199,7 +230,9 @@ class TaskRepository:
         )
         return [dict(row) for row in rows]
 
-    def mark_failures_surfaced(self, user_id: str, guild_id: str | None, surfaced_at: datetime) -> None:
+    def mark_failures_surfaced(
+        self, user_id: str, guild_id: str | None, surfaced_at: datetime
+    ) -> None:
         self.db.execute(
             """
             UPDATE notification_failures
@@ -251,7 +284,9 @@ class TaskRepository:
         )
         return [self._row_to_task(row) for row in rows]
 
-    def add_repeat_skip(self, parent_series_id: str, reason: str, created_at: datetime) -> None:
+    def add_repeat_skip(
+        self, parent_series_id: str, reason: str, created_at: datetime
+    ) -> None:
         self.db.execute(
             """
             INSERT INTO repeat_skips(parent_series_id, created_at, reason)
@@ -267,8 +302,12 @@ class TaskRepository:
         )
         return cursor.rowcount
 
-    def _replace_assignees_without_commit(self, task_id: str, assignee_ids: list[str]) -> None:
-        self.db.connection.execute("DELETE FROM assignees WHERE task_id = ?", (task_id,))
+    def _replace_assignees_without_commit(
+        self, task_id: str, assignee_ids: list[str]
+    ) -> None:
+        self.db.connection.execute(
+            "DELETE FROM assignees WHERE task_id = ?", (task_id,)
+        )
         self.db.connection.executemany(
             "INSERT INTO assignees(task_id, user_id) VALUES (?, ?)",
             [(task_id, user_id) for user_id in dict.fromkeys(assignee_ids)],
@@ -280,7 +319,9 @@ class TaskRepository:
         due_at: datetime | None,
         reminder_offsets: list[int],
     ) -> None:
-        self.db.connection.execute("DELETE FROM reminders WHERE task_id = ?", (task_id,))
+        self.db.connection.execute(
+            "DELETE FROM reminders WHERE task_id = ?", (task_id,)
+        )
         if due_at is None:
             return
         params = []
