@@ -13,11 +13,13 @@ permissions:
 
 jobs:
   ruff:
-    name: Ruff Format & Lint Check
+    name: Ruff Format Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/ruff-action@v3
+        with:
+          args: "format --check"
 
   pr-title:
     name: Conventional Commits PR Title Check
