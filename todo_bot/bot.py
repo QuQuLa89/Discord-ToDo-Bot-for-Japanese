@@ -31,7 +31,7 @@ from .constants import (
 from .db import Database
 from .models import Reminder, Task
 from .repository import TaskRepository
-from .services import PermissionDenied, TaskService, UNSET, UserFacingError, task_line
+from .services import UNSET, PermissionDenied, TaskService, UserFacingError, task_line
 from .time_utils import format_user_date, format_user_datetime, now_utc
 
 logger = logging.getLogger(__name__)
@@ -138,10 +138,10 @@ class TodoDiscordBot(discord.Client):
             if task.task_type == TASK_TYPE_PERSONAL:
                 failures = []
                 for user_id in recipient_ids:
-                    user = self.get_user(int(user_id)) or await self.fetch_user(
-                        int(user_id)
-                    )
                     try:
+                        user = self.get_user(int(user_id)) or await self.fetch_user(
+                            int(user_id)
+                        )
                         await user.send(message, allowed_mentions=allowed)
                     except discord.DiscordException as exc:
                         failures.append(str(exc))
@@ -167,10 +167,8 @@ class TodoDiscordBot(discord.Client):
                 raise RuntimeError("通知先チャンネルへ送信できません。")
             await channel.send(message, allowed_mentions=allowed)
             self.service.repo.mark_reminder_sent(reminder.reminder_id, sent_at)
-        except Exception as exc:
-            logger.warning(
-                "共有タスク通知に失敗しました task_id=%s error=%s", task.task_id, exc
-            )
+        except Exception:
+            logger.exception("共有タスク通知に失敗しました task_id=%s", task.task_id)
             try:
                 creator = self.get_user(int(task.creator_id)) or await self.fetch_user(
                     int(task.creator_id)
